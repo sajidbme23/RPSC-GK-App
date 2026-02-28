@@ -6,13 +6,11 @@ import time
 # --- 1. PREMIUM PAGE SETUP & UI ---
 st.set_page_config(page_title="RPSC 2nd Grade Pro Test", layout="wide", page_icon="🏆")
 
-# FIXED CSS: Ab Dark/Light mode dono me text saaf dikhega
+# CSS for Dark/Light mode adaptability
 st.markdown("""
     <style>
     .stButton>button { width: 100%; border-radius: 8px; height: 3.5em; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: white; font-weight: bold; border: none; font-size: 16px; transition: 0.3s; }
     .stButton>button:hover { transform: scale(1.02); box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 1px solid #f4c20d; }
-    
-    /* Removed hardcoded white backgrounds so it adapts to Dark Mode automatically */
     .question-card { padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #2a5298; border-left: 5px solid #2a5298; }
     .result-card-correct { padding: 15px; border-radius: 8px; border-left: 5px solid #4caf50; margin-top: 10px; border: 1px solid #2e7d32; }
     .result-card-wrong { padding: 15px; border-radius: 8px; border-left: 5px solid #f44336; margin-top: 10px; border: 1px solid #c62828; }
@@ -86,21 +84,24 @@ if st.session_state.test_active and not st.session_state.submitted:
     # Generate Questions only if not already generated
     if st.session_state.test_data is None:
         model = genai.GenerativeModel(selected_model_id)
+        
+        # ---> YAHAN NAYA RULE ADD KIYA HAI <---
         prompt = f"""
         Aap RPSC 2nd Grade ke expert hain. '{topic}' par exactly 10 questions banaiye.
         
         STRICT RULES & LOGIC:
-        1. Question 1: Yeh ek Real Previous Year Question (PYQ) hona chahiye. Question ke ant mein bracket mein (Exam Name aur Year) likhein.
-        2. Questions 2, 3, 4, aur 5: Yeh chaar sawal Question 1 ke chaar options (A, B, C, D) par aadharit hone chahiye. Har option ki detail par ek naya sawal banayein.
-        3. Questions 6 to 10: Isi topic ke anya mahatvapurn (important) sawal banayein.
-        4. Har sawal ke 5 options honge. 5th option hamesha "अनुत्तरित प्रश्न" hoga.
-        5. Sab kuch HINDI mein hoga.
+        1. Level & Pattern: Sabhi sawal STRICTLY 2024 aur 2025 ke latest RPSC exams ke level aur pattern par hi banayein. Isme "Kathan-Karan" (Statement-Reason) aur "Milan" (Match the following) wale sawal bhi shamil karein jo aaj kal RPSC puchta hai.
+        2. Question 1: Yeh ek Real Previous Year Question (PYQ) hona chahiye jo strictly 2024 ya 2025 ke kisi RPSC exam mein aaya ho. Question ke ant mein bracket mein (Exam Name aur Year) likhein.
+        3. Questions 2, 3, 4, aur 5: Yeh chaar sawal Question 1 ke chaar options (A, B, C, D) ki detailed jaankari par aadharit hone chahiye.
+        4. Questions 6 to 10: Isi topic ke anya mahatvapurn (important) aur tough sawal banayein.
+        5. Har sawal ke 5 options honge. 5th option hamesha "अनुत्तरित प्रश्न" hoga.
+        6. Sab kuch HINDI mein hoga.
         
         OUTPUT FORMAT (Strictly ONLY valid JSON array of objects, no markdown syntax like ```json):
         [
             {{
                 "q_no": 1,
-                "question": "Sawal likhein... (RPSC 2018)",
+                "question": "Sawal likhein... (RPSC 2024/2025)",
                 "options": ["Option 1", "Option 2", "Option 3", "Option 4", "अनुत्तरित प्रश्न"],
                 "answer_index": 0,
                 "explanation": "Detail explanation in Hindi..."
@@ -108,7 +109,7 @@ if st.session_state.test_active and not st.session_state.submitted:
         ]
         """
         
-        with st.spinner("Expert AI Test paper taiyar kar raha hai... Kripya pratiksha karein."):
+        with st.spinner("Expert AI 2024-25 ke latest pattern par Test paper taiyar kar raha hai..."):
             try:
                 response = model.generate_content(prompt)
                 raw_text = response.text.replace('```json', '').replace('```', '').strip()
@@ -129,12 +130,11 @@ if st.session_state.test_active and not st.session_state.submitted:
         with st.form(key="test_form"):
             for q in st.session_state.test_data:
                 st.markdown(f"<div class='question-card'><h4>Q{q['q_no']}. {q['question']}</h4></div>", unsafe_allow_html=True)
-                # Radio buttons for options
                 user_choice = st.radio(
                     "Apna jawab chunein:", 
                     q['options'], 
                     key=f"q_{q['q_no']}",
-                    index=None # No default selection
+                    index=None
                 )
                 st.session_state.user_answers[q['q_no']] = user_choice
                 st.write("---")
@@ -158,7 +158,6 @@ if st.session_state.submitted and st.session_state.test_data:
     wrong = 0
     unattempted = 0
     
-    # Calculate Score
     for q in st.session_state.test_data:
         correct_option_text = q['options'][q['answer_index']]
         user_choice = st.session_state.user_answers.get(q['q_no'])
@@ -172,7 +171,6 @@ if st.session_state.submitted and st.session_state.test_data:
             score -= 0.66
             wrong += 1
             
-    # Score Board
     st.markdown(f"""
         <div class='score-board'>
             Total Score: {round(score, 2)} / 20 <br>
@@ -185,7 +183,6 @@ if st.session_state.submitted and st.session_state.test_data:
     st.write("---")
     st.subheader("📝 Vistrit Vishleshan (Detailed Explanations)")
     
-    # Show explanations
     for q in st.session_state.test_data:
         correct_option_text = q['options'][q['answer_index']]
         user_choice = st.session_state.user_answers.get(q['q_no'])
